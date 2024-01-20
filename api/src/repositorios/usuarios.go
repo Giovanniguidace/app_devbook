@@ -11,7 +11,7 @@ type Usuarios struct {
 	db *sql.DB
 }
 
-// NovoRepositorioDeUsuarios cria um repositóio de usuários
+// NovoRepositorioDeUsuarios cria um repositório de usuários
 func NovoRepositorioDeUsuarios(db *sql.DB) *Usuarios {
 	return &Usuarios{db}
 }
@@ -101,4 +101,39 @@ func (repositorio Usuarios) BuscarPorID(usuarioId uint64) (modelos.Usuario, erro
 	}
 
 	return usuario, nil
+}
+
+// Atualizar realiza a alteração de informações de usuário no banco de dados
+func (repositorio Usuarios) Atualizar(usuarioID uint64, usuario modelos.Usuario) error {
+	statement, erro := repositorio.db.Prepare(
+		"update usuarios set nome = ?, nick = ?, email = ? where id = ?",
+	)
+	if erro != nil {
+		return erro
+	}
+
+	defer statement.Close()
+
+	if _, erro = statement.Exec(usuario.Nome, usuario.Nick, usuario.Email, usuarioID); erro != nil {
+		return erro
+	}
+
+	return nil
+}
+
+// Deletar exclui as informações de um usuário no banco de dados
+func (repositorio Usuarios) Deletar(usuarioID uint64) error {
+	statement, erro := repositorio.db.Prepare(
+		"delete from usuarios where id = ?",
+	)
+	if erro != nil {
+		return erro
+	}
+	defer statement.Close()
+
+	if _, erro = statement.Exec(usuarioID); erro != nil {
+		return erro
+	}
+
+	return nil
 }
