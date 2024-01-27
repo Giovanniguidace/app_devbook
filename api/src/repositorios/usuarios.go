@@ -256,3 +256,44 @@ func (repositorio Usuarios) BuscarSeguindo(usuarioID uint64) ([]modelos.Usuario,
 	}
 	return usuarios, nil
 }
+
+// BuscarSenha busca a senha de um determinado usuário
+func (repositorio Usuarios) BuscarSenha(usuarioID uint64) (string, error) {
+	linha, erro := repositorio.db.Query(
+		"select senha from usuarios where id = ?", usuarioID,
+	)
+	if erro != nil {
+		return "", nil
+	}
+
+	var usuario modelos.Usuario
+	if linha.Next() {
+		if erro = linha.Scan(
+			&usuario.Senha,
+		); erro != nil {
+			return "", nil
+		}
+	}
+
+	return usuario.Senha, nil
+}
+
+// AtualizarSenha atualiza a senha de um determinado usuário no banco
+func (repositorio Usuarios) AtualizarSenha(usuarioID uint64, senhaComHash string) error {
+	statement, erro := repositorio.db.Prepare(
+		"update usuarios set senha = ? where id = ?",
+	)
+	if erro != nil {
+		return erro
+	}
+
+	defer statement.Close()
+
+	_, erro = statement.Exec(senhaComHash, usuarioID)
+	if erro != nil {
+		return erro
+	}
+
+	return nil
+
+}
