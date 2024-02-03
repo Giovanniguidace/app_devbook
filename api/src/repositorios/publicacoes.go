@@ -104,3 +104,22 @@ func (repositorio Publicacoes) Buscar(usuarioID uint64) ([]modelos.Publicacao, e
 
 	return publicacoes, nil
 }
+
+// Atualizar realiza a atualização de uma determinada publicação no banco de dados
+func (repositorio Publicacoes) Atualizar(publicacaoId uint64, publicacao modelos.Publicacao) error {
+	statement, erro := repositorio.db.Prepare(
+		"update publicacoes set titulo = ?, conteudo = ? where id = ? ",
+	)
+	if erro != nil {
+		return erro
+	}
+	defer statement.Close()
+
+	_, erro = statement.Exec(publicacao.Titulo, publicacao.Conteudo, publicacaoId)
+	if erro != nil {
+		return erro
+	}
+
+	return nil
+
+}
