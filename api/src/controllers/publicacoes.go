@@ -57,7 +57,6 @@ func CriarPublicacao(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respostas.JSON(w, http.StatusCreated, publicacao)
-
 }
 
 // BuscarPublicacoestraz as publicações que apareceriam no feed do usuário
@@ -131,6 +130,7 @@ func AtualizarPublicacao(w http.ResponseWriter, r *http.Request) {
 		respostas.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
+	defer db.Close()
 
 	repositorio := repositorios.NovoRepositorioDePublicacoes(db)
 	publicacaoConsultada, erro := repositorio.BuscarPorID(publicacaoId)
@@ -168,10 +168,74 @@ func AtualizarPublicacao(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respostas.JSON(w, http.StatusNoContent, nil)
-
 }
 
-// DeletePublicacao exclui os dados de uma publicação
+// DeletePublicacao exclui os dados de uma publicação do usuário logado
 func DeletePublicacao(w http.ResponseWriter, r *http.Request) {
+	usuarioID, erro := autenticacao.ExtrairUsuarioID(r)
+	if erro != nil {
+		respostas.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	parametros := mux.Vars(r)
+	publicacaoID, erro := strconv.ParseUint(parametros["publicacaoId"], 10, 64)
+	if erro != nil {
+		respostas.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	db, erro := banco.Conectar()
+	if erro != nil {
+		respostas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	repositorio := repositorios.NovoRepositorioDePublicacoes(db)
+	publicacaoConsultada, erro := repositorio.BuscarPorID(publicacaoID)
+	if erro != nil {
+		respostas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	if publicacaoConsultada.AutorID != usuarioID {
+		respostas.Erro(w, http.StatusForbidden, errors.New("Você não pode deletar uma publicação que não seja a sua"))
+		return
+	}
+
+	erro = repositorio.Deletar(publicacaoID)
+	if erro != nil {
+		respostas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	respostas.JSON(w, http.StatusNoContent, nil)
+}
+
+// BuscarPublicacoesPorUsuario busca todas as publicações de um determinado usuário
+func BuscarPublicacoesPorUsuario(w http.ResponseWriter, r *http.Request) {
+	parametros := mux.Vars(r)
+	usuarioID, erro := strconv.ParseUint(parametros["usuarioId"], 10, 64)
+	if erro != nil {
+		respostas.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	db, erro := banco.Conectar()
+	if erro != nil {
+		respostas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	repositorio := repositorios.NovoRepositorioDePublicacoes(db)
+	publicacoes, erro := repositorio.BuscarPorUsuario(usuarioID)
+	if erro != nil {
+		respostas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	respostas.JSON(w, http.StatusOK, publicacoes)
 
 }
